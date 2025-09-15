@@ -1,11 +1,10 @@
-﻿using System.Collections;
-using System.Collections.Generic;
-using UnityEngine;
+﻿using UnityEngine;
 
 public class GunSwitcher : MonoBehaviour
 {
     public GameObject[] guns;
     private int currentGunIndex = 0;
+    private IWeapon currentWeapon;
 
     void Start()
     {
@@ -20,6 +19,13 @@ public class GunSwitcher : MonoBehaviour
 
     private void SelectGun(int index)
     {
+        if (index < 0 || index >= guns.Length) return;
+
+        // Hủy reload súng cũ
+        if (currentWeapon != null)
+            currentWeapon.StopReload();
+
+        // Tắt tất cả
         for (int i = 0; i < guns.Length; i++)
         {
             if (guns[i] != null)
@@ -27,6 +33,12 @@ public class GunSwitcher : MonoBehaviour
         }
 
         currentGunIndex = index;
+
+        // Lấy weapon mới
+        currentWeapon = guns[currentGunIndex].GetComponent<IWeapon>();
+        if (currentWeapon != null)
+            currentWeapon.UpdateUI();
+
         Debug.Log("Selected gun: " + guns[currentGunIndex].name);
     }
 }

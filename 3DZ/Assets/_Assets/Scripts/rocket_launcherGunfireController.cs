@@ -2,7 +2,7 @@
 using TMPro;
 using System.Collections;
 
-public class RocketLauncherController : MonoBehaviour
+public class RocketLauncherController : MonoBehaviour, IWeapon
 {
     [Header("Gun Info")]
     public string gunName = "B41";
@@ -40,22 +40,20 @@ public class RocketLauncherController : MonoBehaviour
 
     // --- UI ---
     [Header("UI Ammo Display")]
-    public TextMeshProUGUI ammoText;   // gán trong Inspector
-    public TextMeshProUGUI gunNameText; // (tuỳ chọn) hiển thị tên súng
+    public TextMeshProUGUI ammoText;
+    public TextMeshProUGUI gunNameText;
 
     private void Start()
     {
         if (source != null) source.clip = GunShotClip;
         currentAmmo = magazineSize;
-        UpdateAmmoUI();
-        UpdateGunNameUI();
+        UpdateUI();
     }
 
     private void Update()
     {
         if (isReloading) return;
 
-        // Xoay thử nghiệm nếu cần
         if (rotate)
         {
             transform.localEulerAngles = new Vector3(
@@ -64,23 +62,14 @@ public class RocketLauncherController : MonoBehaviour
                 transform.localEulerAngles.z);
         }
 
-        // Fire: click chuột trái (1 phát)
         if (Input.GetMouseButtonDown(0))
-        {
             TryFire();
-        }
 
-        // Reload thủ công
         if (Input.GetKeyDown(KeyCode.R) && !isReloading)
-        {
             StartCoroutine(ReloadCoroutine());
-        }
 
-        // Nếu hết đạn, tự reload nếu muốn (ở đây chúng ta tự reload)
         if (currentAmmo <= 0 && !isReloading)
-        {
             StartCoroutine(ReloadCoroutine());
-        }
     }
 
     private void TryFire()
@@ -95,31 +84,21 @@ public class RocketLauncherController : MonoBehaviour
 
         FireWeapon();
         currentAmmo--;
-        UpdateAmmoUI();
+        UpdateUI();
     }
 
     public void FireWeapon()
     {
-        // Muzzle flash
-        if (muzzlePrefab != null && muzzlePosition != null)
-        {
+        if (muzzlePrefab && muzzlePosition)
             Instantiate(muzzlePrefab, muzzlePosition.transform);
-        }
 
-        // Spawn projectile
-        if (projectilePrefab != null && muzzlePosition != null)
-        {
+        if (projectilePrefab && muzzlePosition)
             Instantiate(projectilePrefab, muzzlePosition.transform.position, muzzlePosition.transform.rotation);
-        }
 
-        // Ẩn model rocket gắn trên launcher nếu có
-        if (projectileToDisableOnFire != null)
-        {
+        if (projectileToDisableOnFire)
             projectileToDisableOnFire.SetActive(false);
-        }
 
-        // Audio
-        if (source != null && GunShotClip != null)
+        if (source && GunShotClip)
         {
             source.pitch = Random.Range(audioPitch.x, audioPitch.y);
             source.PlayOneShot(GunShotClip);
@@ -131,44 +110,32 @@ public class RocketLauncherController : MonoBehaviour
         isReloading = true;
         Debug.Log($"{gunName} Reloading...");
 
-        // Play reload sound
-        if (source != null && ReloadClip != null)
-        {
+        if (source && ReloadClip)
             source.PlayOneShot(ReloadClip);
-        }
 
-        // Cập nhật UI nếu muốn hiển thị "Reloading..."
-        if (ammoText != null)
-        {
-            ammoText.text = "Reloading...";
-        }
+        if (ammoText) ammoText.text = "Reloading...";
 
         yield return new WaitForSeconds(reloadTime);
 
-        // Re-enable visible rocket on launcher
-        if (projectileToDisableOnFire != null)
-        {
+        if (projectileToDisableOnFire)
             projectileToDisableOnFire.SetActive(true);
-        }
 
         currentAmmo = magazineSize;
         isReloading = false;
-        UpdateAmmoUI();
+        UpdateUI();
     }
 
-    private void UpdateAmmoUI()
+    // --- IWeapon ---
+    public void StopReload()
     {
-        if (ammoText != null)
-        {
-            ammoText.text = $"{currentAmmo} / {magazineSize}";
-        }
+        isReloading = false;
+        StopAllCoroutines();
+        UpdateUI();
     }
 
-    private void UpdateGunNameUI()
+    public void UpdateUI()
     {
-        if (gunNameText != null)
-        {
-            gunNameText.text = gunName;
-        }
+        if (ammoText) ammoText.text = $"{currentAmmo} / {magazineSize}";
+        if (gunNameText) gunNameText.text = gunName;
     }
 }

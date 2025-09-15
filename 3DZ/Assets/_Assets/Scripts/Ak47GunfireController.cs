@@ -1,50 +1,43 @@
 ﻿using UnityEngine;
-using TMPro; // dùng cho TextMeshPro UI
+using TMPro;
 using System.Collections;
 
-public class AK47GunfireController : MonoBehaviour
+public class AK47GunfireController : MonoBehaviour, IWeapon
 {
-    // --- Audio ---
     [Header("Audio Settings")]
     public AudioClip GunShotClip;
     public AudioClip ReloadClip;
     public AudioSource source;
     public Vector2 audioPitch = new Vector2(.9f, 1.1f);
 
-    // --- Muzzle ---
     [Header("Muzzle Settings")]
     public GameObject muzzlePrefab;
     public GameObject muzzlePosition;
 
-    // --- Config ---
     [Header("Config")]
     public string gunName = "AK47";
     public bool autoFire = true;
     public float shotDelay = 0.1f;
 
-    // --- Options ---
     [Header("Scope Settings")]
     public GameObject scope;
     public bool scopeActive = true;
     private bool lastScopeState;
 
-    // --- Projectile ---
     [Header("Projectile Settings")]
     public GameObject projectilePrefab;
     public GameObject projectileToDisableOnFire;
 
-    // --- Ammo ---
     [Header("Ammo Settings")]
     public int magazineSize = 30;
     public int currentAmmo;
     public float reloadTime = 2f;
     public bool isReloading = false;
 
-    // --- UI ---
-    [Header("UI Ammo Display")]
+    [Header("UI Display")]
     public TextMeshProUGUI ammoText;
+    public TextMeshProUGUI gunNameText;
 
-    // --- Timing ---
     [SerializeField] private float timeLastFired;
 
     private void Start()
@@ -53,39 +46,33 @@ public class AK47GunfireController : MonoBehaviour
         timeLastFired = 0;
         lastScopeState = scopeActive;
         currentAmmo = magazineSize;
-        UpdateAmmoUI();
+        UpdateUI();
     }
 
     private void Update()
     {
         if (isReloading) return;
 
-        // --- Reload ---
         if (Input.GetKeyDown(KeyCode.R))
         {
             StartCoroutine(Reload());
             return;
         }
 
-        // --- Switch auto/semi ---
         if (Input.GetKeyDown(KeyCode.B))
         {
             autoFire = !autoFire;
             Debug.Log($"{gunName} switched to " + (autoFire ? "AUTO" : "SEMI"));
         }
 
-        // --- Fire ---
         if (Input.GetMouseButtonDown(0) && !autoFire)
-        {
             TryShoot();
-        }
         else if (Input.GetMouseButton(0) && autoFire)
         {
             if ((timeLastFired + shotDelay) <= Time.time)
                 TryShoot();
         }
 
-        // --- Toggle scope ---
         if (scope && lastScopeState != scopeActive)
         {
             lastScopeState = scopeActive;
@@ -102,7 +89,7 @@ public class AK47GunfireController : MonoBehaviour
         }
         FireWeapon();
         currentAmmo--;
-        UpdateAmmoUI();
+        UpdateUI();
     }
 
     public void FireWeapon()
@@ -110,7 +97,7 @@ public class AK47GunfireController : MonoBehaviour
         timeLastFired = Time.time;
 
         if (muzzlePrefab && muzzlePosition)
-            Instantiate(muzzlePrefab, muzzlePosition.transform);
+            Instantiate(muzzlePrefab, muzzlePosition.transform.position, muzzlePosition.transform.rotation);
 
         if (projectilePrefab && muzzlePosition)
             Instantiate(projectilePrefab, muzzlePosition.transform.position, muzzlePosition.transform.rotation);
@@ -136,22 +123,32 @@ public class AK47GunfireController : MonoBehaviour
         if (source && ReloadClip)
             source.PlayOneShot(ReloadClip);
 
+        if (ammoText) ammoText.text = "Reloading...";
+
         yield return new WaitForSeconds(reloadTime);
 
         currentAmmo = magazineSize;
         isReloading = false;
-        UpdateAmmoUI();
-    }
-
-    private void UpdateAmmoUI()
-    {
-        if (ammoText != null)
-            ammoText.text = currentAmmo + " / " + magazineSize;
+        UpdateUI();
     }
 
     private void ReEnableDisabledProjectile()
     {
         if (projectileToDisableOnFire)
             projectileToDisableOnFire.SetActive(true);
+    }
+
+    // --- IWeapon ---
+    public void StopReload()
+    {
+        isReloading = false;
+        StopAllCoroutines();
+        UpdateUI();
+    }
+
+    public void UpdateUI()
+    {
+        if (ammoText) ammoText.text = currentAmmo + " / " + magazineSize;
+        if (gunNameText) gunNameText.text = gunName;
     }
 }
